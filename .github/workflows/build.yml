@@ -42,3 +42,16 @@ jobs:
         with:
           name: HelloWorld-app
           path: build/Build/Products/Debug-iphoneos/HelloWorld.app
+        
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Debug-iphoneos/HelloWorld.app Payload/
+          zip -r HelloWorld.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: HelloWorld-ipa
+          path: HelloWorld.ipa
+
