@@ -41,4 +41,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HelloWorld-app
-          path: build/Build/Products/Debug-iphonesimulator/HelloWorld.app
+          path: build/Build/Products/Debug-iphoneos/HelloWorld.app
