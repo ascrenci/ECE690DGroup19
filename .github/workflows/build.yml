@@ -36,3 +36,9 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build
+            
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: HelloWorld-app
+          path: build/Build/Products/Debug-iphonesimulator/HelloWorld.app
