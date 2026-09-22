@@ -7,10 +7,13 @@ targets:
   HelloWorld:
     type: application
     platform: iOS
-    deploymentTarget: "17.0"
+    deploymentTarget: "26.6.2"
 
     sources:
       - HelloWorld
+
+    info:
+      path: HelloWorld/Info.plist
 
     settings:
       base:
