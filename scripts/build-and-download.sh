@@ -9,6 +9,7 @@ echo "==> Starting GitHub Actions workflow..."
 
 START_TIME=$(date +%s)
 
+gh auth switch --user ascrenci
 gh workflow run "$WORKFLOW"
 
 echo "==> Waiting for workflow run to appear..."
@@ -16,12 +17,11 @@ echo "==> Waiting for workflow run to appear..."
 RUN_ID=""
 
 for _ in {1..30}; do
-RUN_ID=$(gh run list
---workflow="$WORKFLOW"
---limit=10
---json databaseId,createdAt,status
---jq ".[] | select(.createdAt != null) | select((.createdAt | fromdateiso8601) >= $START_TIME) | .databaseId"
-| head -n 1)
+RUN_ID=$(gh run list \
+--workflow="$WORKFLOW" \
+--limit=10 \
+--json databaseId,createdAt,status \
+--jq ".[] | select(.createdAt != null) | select((.createdAt | fromdateiso8601) >= $START_TIME) | .databaseId" | head -n 1)
 
 if [[ -n "$RUN_ID" ]]; then
     break
@@ -48,8 +48,8 @@ mkdir -p "$OUTPUT_DIR"
 
 echo "==> Downloading IPA artifact..."
 
-gh run download "$RUN_ID"
---name "$ARTIFACT"
+gh run download "$RUN_ID" \
+--name "$ARTIFACT" \
 --dir "$OUTPUT_DIR"
 
 IPA=$(find "$OUTPUT_DIR" -type f -name "*.ipa" -print -quit)
