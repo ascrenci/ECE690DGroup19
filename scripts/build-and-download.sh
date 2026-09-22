@@ -1,23 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-Configuration
-
 WORKFLOW="build.yml"
 ARTIFACT="HelloWorld-ipa"
 OUTPUT_DIR="./dist"
 
 echo "==> Starting GitHub Actions workflow..."
 
-# Record the current time so we don't accidentally download an older run.
-
 START_TIME=$(date +%s)
 
 gh workflow run "$WORKFLOW"
 
-echo "==> Workflow dispatched. Waiting for GitHub to create the run..."
-
-# GitHub can take a few seconds to register the workflow run.
+echo "==> Waiting for workflow run to appear..."
 
 RUN_ID=""
 
@@ -49,8 +43,6 @@ gh run watch "$RUN_ID" --exit-status
 
 echo "==> Build succeeded."
 
-# Remove the previous download.
-
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
@@ -63,19 +55,10 @@ gh run download "$RUN_ID"
 IPA=$(find "$OUTPUT_DIR" -type f -name "*.ipa" -print -quit)
 
 if [[ -z "$IPA" ]]; then
-echo "ERROR: Workflow succeeded, but no .ipa was found."
+echo "ERROR: No .ipa file was found in the downloaded artifact."
 exit 1
 fi
 
 echo
-echo "========================================"
-echo " Build complete!"
-echo "========================================"
-echo
-echo "IPA:"
-echo " $IPA"
-echo
-echo "Size:"
-du -h "$IPA" | cut -f1
-echo
-echo "Ready for sideloading."
+echo "Build complete:"
+echo "$IPA"
