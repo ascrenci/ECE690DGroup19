@@ -1,0 +1,18 @@
+name: HelloWorld
+
+options:
+  bundleIdPrefix: com.example
+
+targets:
+  HelloWorld:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+
+    sources:
+      - HelloWorld
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.HelloWorld
+        SWIFT_VERSION: "5.0"
