@@ -1,0 +1,7 @@
+included:
+  - HelloWorld
+
+excluded:
+  - build
+  - dist
+  - Payload

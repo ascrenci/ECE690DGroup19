@@ -12,8 +12,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Install XcodeGen and SwiftLint
+        run: brew install xcodegen swiftlint
 
       - name: Generate Xcode project
         run: xcodegen generate

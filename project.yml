@@ -19,3 +19,12 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.HelloWorld
         SWIFT_VERSION: "5.0"
+
+    preBuildScripts:
+      - name: SwiftLint
+        script: |
+          if which swiftlint > /dev/null; then
+            swiftlint lint --config "$SRCROOT/.swiftlint.yml"
+          else
+            echo "warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint"
+          fi
