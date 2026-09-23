@@ -6,8 +6,8 @@ struct ContentView: View {
             Text("Hello, iPhone!")
                 .font(.largeTitle)
 
-            Text("Built on GitHub Actions")
-                .padding()
+            Text("Tada")
+                // .padding()
         }
     }
 }
