@@ -12,8 +12,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install XcodeGen and SwiftLint
-        run: brew install xcodegen swiftlint
+      - name: Install XcodeGen
+        run: brew install xcodegen
 
       - name: Generate Xcode project
         run: xcodegen generate
@@ -26,7 +26,7 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Build for iOS Simulator
+      - name: Build .ipa File
         run: |
           xcodebuild \
             -project HelloWorld.xcodeproj \
@@ -37,11 +37,11 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Upload app
-        uses: actions/upload-artifact@v4
-        with:
-          name: HelloWorld-app
-          path: build/Build/Products/Debug-iphoneos/HelloWorld.app
+#      - name: Upload app
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: HelloWorld-app
+#          path: build/Build/Products/Debug-iphoneos/HelloWorld.app
         
       - name: Package unsigned IPA
         run: |
