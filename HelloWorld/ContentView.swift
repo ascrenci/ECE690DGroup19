@@ -6,7 +6,7 @@ struct ContentView: View {
             Text("Hello, iPhone!")
                 .font(.largeTitle)
 
-            Text("Tada")
+            Text("Running from build!")
                 .padding()
         }
     }

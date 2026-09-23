@@ -9,7 +9,7 @@ echo "==> Starting GitHub Actions workflow..."
 
 START_TIME=$(date +%s)
 
-gh workflow run "$WORKFLOW"
+gh workflow run "$WORKFLOW" --ref build
 
 echo "==> Waiting for workflow run to appear..."
 
