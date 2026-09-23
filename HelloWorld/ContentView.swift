@@ -7,7 +7,7 @@ struct ContentView: View {
                 .font(.largeTitle)
 
             Text("Tada")
-                // .padding()
+                .padding()
         }
     }
 }
