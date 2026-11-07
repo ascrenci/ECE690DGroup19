@@ -53,6 +53,16 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      # Restored file mtimes let xcodebuild skip recompiling packages and the Core ML model.
+      - name: Cache Xcode build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: xcode-${{ runner.os }}-${{ hashFiles('project.yml') }}-${{ github.sha }}
+          restore-keys: |
+            xcode-${{ runner.os }}-${{ hashFiles('project.yml') }}-
+            xcode-${{ runner.os }}-
+
       - name: Build .ipa File
         run: |
           xcodebuild \
