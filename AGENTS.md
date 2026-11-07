@@ -26,6 +26,8 @@ If the branch is `behind`, commit or stash local work, then `git pull`. Pulled c
 
 Before planning or editing, and again whenever a request touches code you haven't read:
 
+`graphify-out/` is gitignored: every clone builds its own graph (first time: `/graphify .` from the repo root).
+
 1. Read `graphify-out/GRAPH_REPORT.md` and run `graphify query "<question>"` (or `graphify path` / `graphify explain`) for what the change touches.
 2. Find what already exists that solves the problem, and reuse it. New code is a last resort. Prefer the smallest diff that fully solves the task.
 3. Keep the graph current: after changes, run `graphify update .`. If `graphify-out/` is missing or stale, rebuild with `/graphify .` from the repo root.
