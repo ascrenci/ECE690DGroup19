@@ -5,7 +5,7 @@ on:
 
 
 env:
-  T5_RELEASE: t5-math-v1
+  T5_RELEASE: t5-math-v2
 
 jobs:
   build:
