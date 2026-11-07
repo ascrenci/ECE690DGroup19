@@ -41,11 +41,23 @@ struct ContentView: View {
             .disabled(transcriber.transcript.isEmpty || isConverting)
 
             ScrollView {
-                Text(latex.isEmpty ? latexStatus : latex)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(latex.isEmpty ? .secondary : .primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
+                VStack(alignment: .leading, spacing: 8) {
+                    if latex.isEmpty {
+                        Text(latexStatus)
+                            .foregroundStyle(.secondary)
+                    } else if MathView.canRender(latex) {
+                        MathView(latex: latex)
+                        Text(latex)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    } else {
+                        Text(latex)
+                            .font(.system(.body, design: .monospaced))
+                            .textSelection(.enabled)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 150)
             .padding()

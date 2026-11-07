@@ -10,6 +10,9 @@ packages:
   swift-transformers:
     url: https://github.com/huggingface/swift-transformers
     from: "1.4.0"
+  SwiftMath:
+    url: https://github.com/mgriebling/SwiftMath
+    from: "1.7.3"
 
 targets:
   HelloWorld:
@@ -30,6 +33,7 @@ targets:
       - package: WhisperKit
       - package: swift-transformers
         product: Tokenizers
+      - package: SwiftMath
 
     info:
       path: HelloWorld/Info.plist
@@ -59,7 +63,7 @@ targets:
             echo "warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint"
           fi
 
-  # Stub: no tests yet. The Swift code needs a testability refactor first (see AGENTS.md section 3).
+  # No CI job yet; run in Xcode (see AGENTS.md section 3).
   HelloWorldTests:
     type: bundle.unit-test
     platform: iOS
