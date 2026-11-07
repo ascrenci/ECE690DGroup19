@@ -1,0 +1,12 @@
+# Real CPU torch + a tiny random T5 (no downloads). Install torch from the CPU index in CI:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+pytest
+pytest-cov
+numpy<2
+transformers==4.44.2
+tokenizers
+datasets==2.21.0
+pyarrow<19
+accelerate>=0.33
+sentencepiece
+protobuf

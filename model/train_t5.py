@@ -55,6 +55,46 @@ def evaluate(model, tok, rows, max_source, max_target, batch_size=64, show=10):
     return {"exact_match": exact, "char_similarity": sim}
 
 
+def fit(model, tok, train, out, epochs, batch_size, lr, max_source, max_target, resume=False, save=True):
+    """Fine-tune `model` in place on `train` (rows with `spoken` and `target`); returns the trainer.
+
+    Takes a model object so pruning/ can reuse it. save=False skips intermediate checkpoints.
+    """
+    def tokenize(batch):
+        enc = tok([latex_chars.PROMPT + s for s in batch["spoken"]], max_length=max_source, truncation=True)
+        enc["labels"] = tok(text_target=batch["target"], max_length=max_target, truncation=True)["input_ids"]
+        return enc
+
+    train = train.map(tokenize, batched=True, remove_columns=train.column_names)
+
+    bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    targs = Seq2SeqTrainingArguments(
+        output_dir=str(out),
+        num_train_epochs=epochs,
+        per_device_train_batch_size=batch_size,
+        learning_rate=lr,
+        lr_scheduler_type="linear",
+        warmup_ratio=0.03,
+        weight_decay=0.01,
+        bf16=bf16,
+        fp16=False,
+        logging_steps=100,
+        save_strategy="steps" if save else "no",
+        save_steps=2000,
+        save_total_limit=2,
+        report_to="none",
+    )
+    trainer = Seq2SeqTrainer(
+        model=model,
+        args=targs,
+        train_dataset=train,
+        data_collator=DataCollatorForSeq2Seq(tok, model=model, label_pad_token_id=-100),
+        tokenizer=tok,
+    )
+    trainer.train(resume_from_checkpoint=True if resume else None)
+    return trainer
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default="google/flan-t5-small", help="base model, or a checkpoint dir with --eval-only")
@@ -86,38 +126,8 @@ def main():
     if args.max_train_rows:
         train = train.select(range(min(args.max_train_rows, len(train))))
 
-    def tokenize(batch):
-        enc = tok([latex_chars.PROMPT + s for s in batch["spoken"]], max_length=args.max_source, truncation=True)
-        enc["labels"] = tok(text_target=batch["target"], max_length=args.max_target, truncation=True)["input_ids"]
-        return enc
-
-    train = train.map(tokenize, batched=True, remove_columns=train.column_names)
-
-    bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-    targs = Seq2SeqTrainingArguments(
-        output_dir=str(args.out),
-        num_train_epochs=args.epochs,
-        per_device_train_batch_size=args.batch_size,
-        learning_rate=args.lr,
-        lr_scheduler_type="linear",
-        warmup_ratio=0.03,
-        weight_decay=0.01,
-        bf16=bf16,
-        fp16=False,
-        logging_steps=100,
-        save_strategy="steps",
-        save_steps=2000,
-        save_total_limit=2,
-        report_to="none",
-    )
-    trainer = Seq2SeqTrainer(
-        model=model,
-        args=targs,
-        train_dataset=train,
-        data_collator=DataCollatorForSeq2Seq(tok, model=model, label_pad_token_id=-100),
-        tokenizer=tok,
-    )
-    trainer.train(resume_from_checkpoint=True if args.resume else None)
+    trainer = fit(model, tok, train, args.out, args.epochs, args.batch_size, args.lr,
+                  args.max_source, args.max_target, resume=args.resume)
 
     final = args.out / "final"
     trainer.save_model(str(final))
