@@ -13,18 +13,21 @@ class Stream:
         return iter(self.rows)
 
 
-def row(spoken, equation):
-    return {"spoken_English": spoken, "equation": equation}
+def row(spoken, equation, before="so", after=""):
+    return {"spoken_English": spoken, "equation": equation, "context_before": before, "context_after": after}
 
 
 ROWS = [
-    row("x squared", "$ x ^ { 2 } $"),  # kept (becomes eval)
-    row("x squared", "x ^ { 2 }"),  # duplicate
+    row("x squared.", "$ x ^ { 2 } $", before="we  get", after="here"),  # kept (becomes eval)
+    row("x squared", "x ^ { 2 }", before="we get", after="here"),  # duplicate
     row("", "z = 1"),  # empty spoken
     row(None, "z = 2"),  # missing spoken
     row("x", "x"),  # single-character equation
+    row("w plus one", "w + 1", before=None, after=None),  # no context
+    row("w plus two", "w + 2", after="and $ v $"),  # math in context
     row("at", "a @ b"),  # reserved character
-    row("y plus one", "y + 1"),  # kept
+    row("long", "y = 1", after="word " * 200),  # too long
+    row("y plus one", "y + 1", before="", after="holds"),  # kept, context after only
     row("z minus one", "z - 1"),  # kept -> reaches the requested total
     row("never read", "q = 1"),
 ]
@@ -44,12 +47,13 @@ def test_main_filters_splits_and_writes_jsonl(tmp_path, monkeypatch, capsys):
     prepare_data.main()
 
     eval_rows, train_rows = read(tmp_path / "eval.jsonl"), read(tmp_path / "train.jsonl")
-    assert [r["latex"] for r in eval_rows] == ["x ^ { 2 }"]
-    assert eval_rows[0]["target"] == 'x ! " 2 ?'
-    assert [r["latex"] for r in train_rows] == ["y + 1", "z - 1"]
+    assert eval_rows == [{"spoken": "we get x squared here", "latex": "we get $x ^ { 2 }$ here", "target": 'we get $x ! " 2 ?$ here'}]
+    assert [r["latex"] for r in train_rows] == ["$y + 1$ holds", "so $z - 1$"]
+    assert train_rows[0]["spoken"] == "y plus one holds"
     out = capsys.readouterr().out
     assert "train 2  eval 1" in out
-    for reason in ("duplicate", "empty spoken", "single-char equation", "not representable"):
+    for reason in ("duplicate", "empty spoken", "single-char equation", "no context", "math in context",
+                   "not representable", "too long"):
         assert reason in out
     assert "warning" not in out
 

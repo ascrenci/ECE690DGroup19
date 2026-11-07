@@ -2,14 +2,16 @@
 """Build a clean train/eval subset of MathBridge (Kyudan/MathBridge, MIT) for fine-tuning T5.
 
 Writes <out>/train.jsonl and <out>/eval.jsonl, one object per line:
-  spoken : normalized spoken text (model input, after the task prompt)
-  latex  : normalized LaTeX (what we score against)
+  spoken : context_before + spoken equation + context_after, normalized (model input, after the task prompt)
+  latex  : the same sentence as a note, "before $equation$ after" (what we score against)
   target : latex_chars.encode(latex) (what the model is trained to emit)
 
 Filters (all counted and printed):
   * empty spoken text, or single-character equations (the paper drops ~7M of these too),
-  * equations that can't be represented with T5's vocabulary (see latex_chars.roundtrip_ok),
-  * exact duplicate (spoken, latex) pairs.
+  * rows with no context, or with "$" in the context,
+  * notes that can't be represented with T5's vocabulary (see latex_chars.roundtrip_ok),
+  * exact duplicate (spoken, latex) pairs,
+  * rows longer than MAX_TOKENS on either side (training would see them truncated).
 The eval rows are disjoint from the train rows (same shuffled stream, taken first).
 """
 import argparse
@@ -22,6 +24,8 @@ from datasets import load_dataset
 from transformers import AutoTokenizer
 
 import latex_chars
+
+MAX_TOKENS = 127  # convert_t5.py's default 128 encoder/decoder lengths, minus </s>
 
 
 def main():
@@ -42,17 +46,28 @@ def main():
 
     want = args.train_rows + args.eval_rows
     seen, kept, dropped = set(), [], collections.Counter()
-    for row in itertools.islice(stream, want * 3 + 10_000):  # filters drop <5%; the cap just bounds a bad run
-        spoken = latex_chars.normalize_spoken(row["spoken_English"] or "")
-        latex = latex_chars.normalize(row["equation"] or "")
-        if not spoken:
+    for row in itertools.islice(stream, want * 3 + 10_000):  # filters drop <10%; the cap just bounds a bad run
+        said = latex_chars.normalize_spoken(row["spoken_English"] or "")
+        equation = latex_chars.normalize(row["equation"] or "")
+        before = " ".join((row["context_before"] or "").split())
+        after = " ".join((row["context_after"] or "").split())
+        spoken = latex_chars.normalize_spoken(f"{before} {said} {after}")
+        latex = " ".join(p for p in (before, f"${equation}$", after) if p)
+        if not said:
             dropped["empty spoken"] += 1
-        elif len(latex) < 2:
+        elif len(equation) < 2:
             dropped["single-char equation"] += 1
+        elif not (before or after):
+            # a lone "$...$" would be stripped back to bare LaTeX by latex_chars.normalize
+            dropped["no context"] += 1
+        elif "$" in before + after:
+            dropped["math in context"] += 1
         elif (spoken, latex) in seen:
             dropped["duplicate"] += 1
         elif not latex_chars.roundtrip_ok(latex, tok):
             dropped["not representable in T5 vocab"] += 1
+        elif max(len(tok(t).input_ids) for t in (latex_chars.PROMPT + spoken, latex_chars.encode(latex))) > MAX_TOKENS:
+            dropped["too long"] += 1
         else:
             seen.add((spoken, latex))
             kept.append({"spoken": spoken, "latex": latex, "target": latex_chars.encode(latex)})
