@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
 
 
+env:
+  T5_RELEASE: t5-math-v1
+
 jobs:
   build:
     runs-on: macos-15
@@ -23,13 +26,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: HelloWorld/Models
-          key: t5-coreml-${{ hashFiles('model/convert_t5.py', 'model/requirements.txt') }}
+          key: t5-coreml-${{ env.T5_RELEASE }}-${{ hashFiles('model/convert_t5.py', 'model/latex_chars.py', 'model/requirements.txt') }}
 
       - name: Convert T5 to Core ML
         if: steps.t5-cache.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           pip install -r model/requirements.txt
-          python model/convert_t5.py --out HelloWorld/Models
+          # Fine-tuned checkpoint is a release asset (too big for git); bump T5_RELEASE to use a new one.
+          gh release download "$T5_RELEASE" --pattern "*.zip" --dir model/checkpoint-zip
+          unzip -q model/checkpoint-zip/*.zip -d model/checkpoint
+          python model/convert_t5.py --model model/checkpoint --out HelloWorld/Models
 
       - name: Install XcodeGen
         run: brew install xcodegen
