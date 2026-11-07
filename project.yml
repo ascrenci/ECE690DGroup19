@@ -46,6 +46,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.HelloWorld
         SWIFT_VERSION: "5.0"
 
+    scheme:
+      testTargets:
+        - HelloWorldTests
+
     preBuildScripts:
       - name: SwiftLint
         script: |
@@ -54,3 +58,13 @@ targets:
           else
             echo "warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint"
           fi
+
+  # Stub: no tests yet. The Swift code needs a testability refactor first (see AGENTS.md section 3).
+  HelloWorldTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.6.2"
+    sources:
+      - HelloWorldTests
+    dependencies:
+      - target: HelloWorld

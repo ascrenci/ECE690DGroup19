@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r model/requirements-test.txt
+      # 100% line + branch coverage is enforced by --cov-fail-under in pytest.ini
+      - run: pytest
+
+  swift:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      # No Swift coverage gate yet: the Swift code needs a testability refactor first (see AGENTS.md).
+      - run: |
+          xcodebuild test \
+            -project HelloWorld.xcodeproj \
+            -scheme HelloWorld \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            CODE_SIGNING_ALLOWED=NO

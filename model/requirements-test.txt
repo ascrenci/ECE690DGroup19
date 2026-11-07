@@ -1,0 +1,5 @@
+# Unit tests only. torch/transformers/coremltools/datasets are faked in model/tests/conftest.py,
+# so nothing heavy is installed.
+pytest
+pytest-cov
+numpy<2

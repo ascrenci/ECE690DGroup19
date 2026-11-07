@@ -28,10 +28,11 @@ Do not make a design decision on your own. If a choice is open (new dependency, 
 
 - All code ships with unit tests. No exceptions for "small" or "script" code.
 - Coverage must be **100%** (lines and branches). No `# pragma: no cover` / coverage excludes without asking first.
-- Python: `pytest` + `pytest-cov`, tests in `model/tests/`, gate with `--cov=model --cov-branch --cov-fail-under=100`. Keep tests offline and fast: use tiny fake tokenizers/models, never download weights or datasets.
-- Swift: XCTest, with code coverage enabled in `xcodebuild`. This only runs on macOS, so it runs in CI.
+- Python (live): `pip install -r model/requirements-test.txt`, then run `pytest` from the repo root. Tests are in `model/tests/`; `pytest.ini` enforces 100% line + branch coverage. `conftest.py` fakes torch/transformers/datasets/coremltools, so tests are offline and instant: add fakes there, never download weights or datasets.
+- Swift (pending): `HelloWorldTests/` is an empty XCTest target, and the CI job runs it with no coverage gate. The Swift code (WhisperKit, microphone, SwiftUI, Core ML bundle) needs a testability refactor first; that is a separate planned change.
+- CI (`.github/workflows/test.yml`) runs both on every push and PR.
 - Bug fix = a failing test first, then the fix.
-- Existing code predates these rules and has no tests yet. When you touch a file, bring that file to 100%. Do not leave it worse.
+- Python is at 100% today. Never lower it. Swift predates these rules; when you touch a Swift file, make it testable and test it.
 
 ### What to run
 
