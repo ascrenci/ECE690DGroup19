@@ -180,7 +180,7 @@ def main():
 
     print(f"loading {args.model} ...")
     model = T5ForConditionalGeneration.from_pretrained(args.model, torch_dtype=torch.float32).eval()
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, clean_up_tokenization_spaces=False)
     latex_chars.check_tokenizer(tokenizer)  # the LaTeX<->T5 character mapping relies on this vocab
 
     tokenizer.save_pretrained(tok_dir)

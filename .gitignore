@@ -5,3 +5,6 @@ HelloWorld/Models/
 __pycache__/
 model/data/
 model/checkpoints/
+model/.venv/
+model/coreml/
+model/train.log

@@ -34,7 +34,7 @@ def main():
     ap.add_argument("--buffer", type=int, default=100_000, help="shuffle buffer for the streamed dataset")
     args = ap.parse_args()
 
-    tok = AutoTokenizer.from_pretrained(args.tokenizer)
+    tok = AutoTokenizer.from_pretrained(args.tokenizer, clean_up_tokenization_spaces=False)
     latex_chars.check_tokenizer(tok)
 
     stream = load_dataset("Kyudan/MathBridge", split="train", streaming=True)

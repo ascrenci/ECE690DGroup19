@@ -93,7 +93,7 @@ def check_tokenizer(tokenizer) -> None:
 
     def produces(c):
         ids = tokenizer("a" + c + "b", add_special_tokens=False).input_ids
-        return unk not in ids and tokenizer.decode(ids, skip_special_tokens=True) == "a" + c + "b"
+        return unk not in ids and tokenizer.decode(ids, skip_special_tokens=True, clean_up_tokenization_spaces=False) == "a" + c + "b"
 
     targets = set("".join(src for src, _ in DECODE_STEPS))
     broken = sorted(c for c in targets if not produces(c))
@@ -117,4 +117,6 @@ def roundtrip_ok(latex: str, tokenizer) -> bool:
     ids = tokenizer(s, add_special_tokens=False).input_ids
     if tokenizer.unk_token_id in ids:
         return False
-    return decode(tokenizer.decode(ids, skip_special_tokens=True)) == normalize(latex)
+    # clean_up_tokenization_spaces would silently delete spaces before , . ? ! (our "}" stand-in is "?")
+    text = tokenizer.decode(ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+    return decode(text) == normalize(latex)

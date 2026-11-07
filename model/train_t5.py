@@ -44,7 +44,7 @@ def evaluate(model, tok, rows, max_source, max_target, batch_size=64, show=10):
         ).to(device)
         with torch.no_grad():
             out = model.generate(**enc, max_new_tokens=max_target, num_beams=1, do_sample=False)
-        preds += [latex_chars.decode(t) for t in tok.batch_decode(out, skip_special_tokens=True)]
+        preds += [latex_chars.decode(t) for t in tok.batch_decode(out, skip_special_tokens=True, clean_up_tokenization_spaces=False)]
 
     exact = sum(p == r["latex"] for p, r in zip(preds, rows)) / len(rows)
     sim = sum(difflib.SequenceMatcher(None, p, r["latex"]).ratio() for p, r in zip(preds, rows)) / len(rows)
@@ -70,7 +70,7 @@ def main():
     ap.add_argument("--resume", action="store_true", help="resume from the latest checkpoint in --out")
     args = ap.parse_args()
 
-    tok = AutoTokenizer.from_pretrained(args.model)
+    tok = AutoTokenizer.from_pretrained(args.model, clean_up_tokenization_spaces=False)
     latex_chars.check_tokenizer(tok)
     model = T5ForConditionalGeneration.from_pretrained(args.model, torch_dtype=torch.float32)
     if torch.cuda.is_available():
