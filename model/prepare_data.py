@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Build a clean train/eval subset of MathBridge (Kyudan/MathBridge, MIT) for fine-tuning T5.
+
+Writes <out>/train.jsonl and <out>/eval.jsonl, one object per line:
+  spoken : normalized spoken text (model input, after the task prompt)
+  latex  : normalized LaTeX (what we score against)
+  target : latex_chars.encode(latex) (what the model is trained to emit)
+
+Filters (all counted and printed):
+  * empty spoken text, or single-character equations (the paper drops ~7M of these too),
+  * equations that can't be represented with T5's vocabulary (see latex_chars.roundtrip_ok),
+  * exact duplicate (spoken, latex) pairs.
+The eval rows are disjoint from the train rows (same shuffled stream, taken first).
+"""
+import argparse
+import collections
+import itertools
+import json
+from pathlib import Path
+
+from datasets import load_dataset
+from transformers import AutoTokenizer
+
+import latex_chars
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--tokenizer", default="google/flan-t5-small")
+    ap.add_argument("--out", type=Path, default=Path("model/data"))
+    ap.add_argument("--train-rows", type=int, default=300_000)
+    ap.add_argument("--eval-rows", type=int, default=1_000)
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--buffer", type=int, default=100_000, help="shuffle buffer for the streamed dataset")
+    args = ap.parse_args()
+
+    tok = AutoTokenizer.from_pretrained(args.tokenizer)
+    latex_chars.check_tokenizer(tok)
+
+    stream = load_dataset("Kyudan/MathBridge", split="train", streaming=True)
+    stream = stream.shuffle(seed=args.seed, buffer_size=args.buffer)
+
+    want = args.train_rows + args.eval_rows
+    seen, kept, dropped = set(), [], collections.Counter()
+    for row in itertools.islice(stream, want * 3 + 10_000):  # filters drop <5%; the cap just bounds a bad run
+        spoken = latex_chars.normalize_spoken(row["spoken_English"] or "")
+        latex = latex_chars.normalize(row["equation"] or "")
+        if not spoken:
+            dropped["empty spoken"] += 1
+        elif len(latex) < 2:
+            dropped["single-char equation"] += 1
+        elif (spoken, latex) in seen:
+            dropped["duplicate"] += 1
+        elif not latex_chars.roundtrip_ok(latex, tok):
+            dropped["not representable in T5 vocab"] += 1
+        else:
+            seen.add((spoken, latex))
+            kept.append({"spoken": spoken, "latex": latex, "target": latex_chars.encode(latex)})
+            if len(kept) == want:
+                break
+
+    if len(kept) < want:
+        print(f"warning: only {len(kept)} usable rows, wanted {want}")
+    eval_rows, train_rows = kept[: args.eval_rows], kept[args.eval_rows :]
+
+    args.out.mkdir(parents=True, exist_ok=True)
+    for name, rows in (("eval", eval_rows), ("train", train_rows)):
+        with open(args.out / f"{name}.jsonl", "w", encoding="utf-8") as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    print(f"train {len(train_rows)}  eval {len(eval_rows)}  -> {args.out}")
+    print("dropped:", dict(dropped))
+
+
+if __name__ == "__main__":
+    main()

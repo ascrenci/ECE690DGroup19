@@ -1,0 +1,8 @@
+# Pinned: coremltools only supports a narrow torch range, and newer transformers
+# builds T5 masks with ops that torch.jit.trace can't handle.
+torch==2.4.0
+transformers==4.44.2
+coremltools==8.1
+numpy<2
+sentencepiece
+protobuf

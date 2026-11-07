@@ -1,0 +1,10 @@
+# Training / data prep only (not needed for Core ML conversion). Install on the GPU box:
+#   pip install -r model/requirements-train.txt
+# transformers is pinned to match requirements.txt so the checkpoint converts the same way.
+torch==2.4.0
+transformers==4.44.2
+accelerate>=0.33
+datasets>=2.20
+sentencepiece
+protobuf
+numpy<2

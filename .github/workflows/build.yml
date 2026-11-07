@@ -12,6 +12,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Converted model is ~300 MB and slow to produce, so cache it on the inputs that define it.
+      - name: Cache Core ML T5 model
+        id: t5-cache
+        uses: actions/cache@v4
+        with:
+          path: HelloWorld/Models
+          key: t5-coreml-${{ hashFiles('model/convert_t5.py', 'model/requirements.txt') }}
+
+      - name: Convert T5 to Core ML
+        if: steps.t5-cache.outputs.cache-hit != 'true'
+        run: |
+          pip install -r model/requirements.txt
+          python model/convert_t5.py --out HelloWorld/Models
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
