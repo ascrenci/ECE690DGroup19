@@ -26,9 +26,8 @@ struct MathView: UIViewRepresentable {
         label.invalidateIntrinsicContentSize()
     }
 
+    // shortcut: SwiftMath 1.7.3 can't line-wrap, so long equations scroll sideways; wrap when a release adds it.
     func sizeThatFits(_ proposal: ProposedViewSize, uiView label: MTMathUILabel, context: Context) -> CGSize? {
-        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
-        label.preferredMaxLayoutWidth = width
-        return label.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        label.intrinsicContentSize
     }
 }

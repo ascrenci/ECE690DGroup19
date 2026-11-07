@@ -46,7 +46,9 @@ struct ContentView: View {
                         Text(latexStatus)
                             .foregroundStyle(.secondary)
                     } else if MathView.canRender(latex) {
-                        MathView(latex: latex)
+                        ScrollView(.horizontal) {
+                            MathView(latex: latex)
+                        }
                         Text(latex)
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
