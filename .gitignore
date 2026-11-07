@@ -11,3 +11,4 @@ model/train.log
 .coverage
 htmlcov/
 .pytest_cache/
+graphify-out/
