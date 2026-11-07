@@ -1,0 +1,54 @@
+{
+  "id": "baseline",
+  "method": "baseline",
+  "level": null,
+  "recovery": null,
+  "params": {
+    "total": 76961152,
+    "embeddings": 32899072,
+    "layers": 44062080,
+    "prunable": 44040192
+  },
+  "size_mb": {
+    "fp32": 307.844608,
+    "fp16": 153.922304
+  },
+  "eval": {
+    "exact_match": 0.413,
+    "char_similarity": 0.9392233730868502,
+    "loss": 0.20252176331076874
+  },
+  "latency_ms": {
+    "cpu": 436.8435068964604,
+    "cuda": 313.6671862067205
+  },
+  "spec": {
+    "ffn": {
+      "encoder": [
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024
+      ],
+      "decoder": [
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024
+      ]
+    },
+    "heads": {
+      "encoder": 6,
+      "decoder": 6
+    },
+    "vocab": 32128
+  }
+}

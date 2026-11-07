@@ -1,0 +1,61 @@
+{
+  "id": "vocab",
+  "method": "vocab",
+  "level": null,
+  "recovery": {
+    "rows": 100000,
+    "epochs": 1,
+    "lr": 0.0003,
+    "batch_size": 64,
+    "seed": 0
+  },
+  "kept_tokens": 14757,
+  "params": {
+    "total": 59173248,
+    "embeddings": 15111168,
+    "layers": 44062080,
+    "prunable": 44040192
+  },
+  "size_mb": {
+    "fp32": 236.692992,
+    "fp16": 118.346496
+  },
+  "eval": {
+    "exact_match": 0.413,
+    "char_similarity": 0.9393741331568844,
+    "loss": 0.19628838932793524
+  },
+  "latency_ms": {
+    "cpu": 354.94660344820346,
+    "cuda": 373.2737896551608
+  },
+  "spec": {
+    "ffn": {
+      "encoder": [
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024
+      ],
+      "decoder": [
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024
+      ]
+    },
+    "heads": {
+      "encoder": 6,
+      "decoder": 6
+    },
+    "vocab": 14757
+  }
+}

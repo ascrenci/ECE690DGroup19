@@ -1,0 +1,60 @@
+{
+  "id": "channel-50",
+  "method": "channel",
+  "level": 0.5,
+  "recovery": {
+    "rows": 100000,
+    "epochs": 1,
+    "lr": 0.0003,
+    "batch_size": 64,
+    "seed": 0
+  },
+  "params": {
+    "total": 54940864,
+    "embeddings": 32899072,
+    "layers": 22041792,
+    "prunable": 22020096
+  },
+  "size_mb": {
+    "fp32": 219.763456,
+    "fp16": 109.881728
+  },
+  "eval": {
+    "exact_match": 0.343,
+    "char_similarity": 0.9239038440272404,
+    "loss": 0.30343786317351745
+  },
+  "latency_ms": {
+    "cpu": 317.1044206897179,
+    "cuda": 362.03545172404495
+  },
+  "spec": {
+    "ffn": {
+      "encoder": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "decoder": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ]
+    },
+    "heads": {
+      "encoder": 3,
+      "decoder": 3
+    },
+    "vocab": 32128
+  }
+}

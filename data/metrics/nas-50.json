@@ -1,0 +1,64 @@
+{
+  "id": "nas-50",
+  "method": "nas",
+  "level": 0.5,
+  "recovery": {
+    "rows": 100000,
+    "epochs": 1,
+    "lr": 0.0003,
+    "batch_size": 64,
+    "seed": 0
+  },
+  "nas": {
+    "proxy_loss": 3.3940953205440736,
+    "evaluations": 94
+  },
+  "params": {
+    "total": 54940864,
+    "embeddings": 32899072,
+    "layers": 22041792,
+    "prunable": 22020096
+  },
+  "size_mb": {
+    "fp32": 219.763456,
+    "fp16": 109.881728
+  },
+  "eval": {
+    "exact_match": 0.339,
+    "char_similarity": 0.9228348550422345,
+    "loss": 0.2977821782426423
+  },
+  "latency_ms": {
+    "cpu": 325.3848965515976,
+    "cuda": 415.39597241378567
+  },
+  "spec": {
+    "ffn": {
+      "encoder": [
+        256,
+        512,
+        256,
+        768,
+        1024,
+        256,
+        512,
+        256
+      ],
+      "decoder": [
+        512,
+        1024,
+        256,
+        256,
+        768,
+        256,
+        1024,
+        256
+      ]
+    },
+    "heads": {
+      "encoder": 3,
+      "decoder": 3
+    },
+    "vocab": 32128
+  }
+}
