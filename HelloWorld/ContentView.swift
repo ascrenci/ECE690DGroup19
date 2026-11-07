@@ -40,10 +40,16 @@ struct ContentView: View {
             .buttonStyle(.bordered)
             .disabled(transcriber.transcript.isEmpty || isConverting)
 
-            Text(latex.isEmpty ? latexStatus : latex)
-                .font(.system(.body, design: .monospaced))
-                .foregroundStyle(latex.isEmpty ? .secondary : .primary)
-                .textSelection(.enabled)
+            ScrollView {
+                Text(latex.isEmpty ? latexStatus : latex)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(latex.isEmpty ? .secondary : .primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+            .frame(maxHeight: 150)
+            .padding()
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
 
             // Streaming doesn't expose per-pass timings, so keep the one-shot path for benchmarking.
             Button("Benchmark 5s clip") {
