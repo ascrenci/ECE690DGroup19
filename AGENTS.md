@@ -69,6 +69,6 @@ When steps do not depend on each other (reading files, graph queries, running in
 
 - Keep the shortest working diff. No abstractions, options, or "for later" code that nobody asked for. Delete before adding.
 - Don't add comments that restate the code. Comment only the non-obvious *why*.
-- Commits: small, one purpose each, imperative subject. Don't push to `main` without being asked.
+- Commits: small, one purpose each. Message is one short imperative line (uber concise, no body unless essential) and never uses em dashes. Don't push to `main` without being asked.
 - Swift passes `swiftlint` (config in `.swiftlint.yml`); Python stays as clean as the existing `model/` files.
 - Do not commit secrets, model weights, datasets, or generated files listed above. Large artifacts go in GitHub releases (the current model is the `t5-math-v1` release).
