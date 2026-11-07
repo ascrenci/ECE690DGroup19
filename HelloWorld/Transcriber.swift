@@ -45,7 +45,8 @@ final class Transcriber: ObservableObject {
             textDecoder: whisper.textDecoder,
             tokenizer: tokenizer,
             audioProcessor: whisper.audioProcessor,
-            decodingOptions: DecodingOptions()
+            // Strip <|startoftranscript|>/<|0.00|> from text; keep timestamps, streaming uses them to confirm segments.
+            decodingOptions: DecodingOptions(skipSpecialTokens: true)
         ) { [weak self] _, state in
             // Confirmed segments are final; the rest is the model's current guess and may still change.
             let confirmed = state.confirmedSegments.map(\.text).joined()
