@@ -50,7 +50,7 @@ def prune_ffn(model, keep):
 def prune_heads(model, keep):
     """keep[stack] = head indices kept in every layer of that stack."""
     for stack in STACKS:
-        heads = torch.as_tensor(keep[stack])
+        heads = torch.as_tensor(keep[stack]).cpu()  # CPU like torch.arange below; moved to the weights' device after
         for block in blocks(model, stack):
             for attn in attentions(block):
                 dim = attn.key_value_proj_dim
