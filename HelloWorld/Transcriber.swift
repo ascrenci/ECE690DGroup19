@@ -7,8 +7,10 @@ final class Transcriber: ObservableObject {
     @Published var status = "Idle"
     @Published var transcript = ""
     @Published var isBusy = false
+    @Published var isStreaming = false
 
     private var whisper: WhisperKit?
+    private var streamer: AudioStreamTranscriber?
     private var recorder: AVAudioRecorder?
     private let clipURL = FileManager.default.temporaryDirectory.appendingPathComponent("clip.wav")
 
@@ -27,6 +29,43 @@ final class Transcriber: ObservableObject {
         } catch {
             status = "Model load failed: \(error)"
         }
+    }
+
+    func toggleStreaming() async {
+        if let streamer {
+            await streamer.stopStreamTranscription()
+            return
+        }
+        guard let whisper, let tokenizer = whisper.tokenizer else { status = "Model not loaded"; return }
+
+        let streamer = AudioStreamTranscriber(
+            audioEncoder: whisper.audioEncoder,
+            featureExtractor: whisper.featureExtractor,
+            segmentSeeker: whisper.segmentSeeker,
+            textDecoder: whisper.textDecoder,
+            tokenizer: tokenizer,
+            audioProcessor: whisper.audioProcessor,
+            decodingOptions: DecodingOptions()
+        ) { [weak self] _, state in
+            // Confirmed segments are final; the rest is the model's current guess and may still change.
+            let confirmed = state.confirmedSegments.map(\.text).joined()
+            let pending = state.unconfirmedSegments.map(\.text).joined()
+            Task { @MainActor in
+                self?.transcript = confirmed + pending
+                self?.status = state.isRecording ? "Listening… \(state.currentText)" : "Stopped"
+            }
+        }
+        self.streamer = streamer
+        isStreaming = true
+        transcript = ""
+        do {
+            // Returns only after stopStreamTranscription() ends the loop.
+            try await streamer.startStreamTranscription()
+        } catch {
+            status = "Streaming failed: \(error)"
+        }
+        self.streamer = nil
+        isStreaming = false
     }
 
     func recordAndTranscribe(seconds: Double = 5) async {
@@ -70,7 +109,17 @@ final class Transcriber: ObservableObject {
             let start = Date()
             let results = try await whisper.transcribe(audioPath: clipURL.path)
             transcript = results.map(\.text).joined(separator: " ")
-            status = String(format: "Done (%.2fs)", Date().timeIntervalSince(start))
+            let wall = Date().timeIntervalSince(start)
+            if let t = results.first?.timings {
+                // RTF < 1 means faster than real time; the first run after load is slower (warm-up), so test several times.
+                status = String(
+                    format: "Audio %.1fs · encode %.0fms · decode %.0fms · total %.0fms\nRTF %.3f · %.0f tok/s · wall %.2fs",
+                    t.inputAudioSeconds, t.encoding * 1000, t.decodingLoop * 1000, t.fullPipeline * 1000,
+                    t.realTimeFactor, t.tokensPerSecond, wall
+                )
+            } else {
+                status = String(format: "Done (%.2fs)", wall)
+            }
         } catch {
             status = "Transcription failed: \(error)"
         }

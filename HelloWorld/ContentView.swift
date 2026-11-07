@@ -22,11 +22,19 @@ struct ContentView: View {
             .padding()
             .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
 
-            Button("Record 5s & Transcribe") {
-                Task { await transcriber.recordAndTranscribe() }
+            Button(transcriber.isStreaming ? "Stop" : "Start") {
+                Task { await transcriber.toggleStreaming() }
             }
             .buttonStyle(.borderedProminent)
+            .tint(transcriber.isStreaming ? .red : .accentColor)
             .disabled(transcriber.isBusy)
+
+            // Streaming doesn't expose per-pass timings, so keep the one-shot path for benchmarking.
+            Button("Benchmark 5s clip") {
+                Task { await transcriber.recordAndTranscribe() }
+            }
+            .buttonStyle(.bordered)
+            .disabled(transcriber.isBusy || transcriber.isStreaming)
         }
         .padding()
         .task { await transcriber.loadModel() }
