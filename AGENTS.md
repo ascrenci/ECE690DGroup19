@@ -8,6 +8,8 @@ iOS app that turns spoken math from lectures into LaTeX, live and fully on-devic
 
 - `HelloWorld/` – Swift app (`Transcriber`, `T5Translator`, `ContentView`)
 - `model/` – Python: data prep, training, Core ML conversion, and `latex_chars.py` (the LaTeX ↔ T5-safe character mapping; T5 cannot emit `\ ^ { } ~ < ` `)
+- `pruning/` – pruning study on the trained T5 (channel, NAS, vocabulary); `python pruning/run.py <method>`, `python pruning/report.py`
+- `data/` – tracked results: `data/metrics/*.json` per model, `data/comparison.{md,csv}` (not the training data, which is `model/data/`)
 - `scripts/` – bash only (`build-and-download.sh`, `download-latest.sh`); no Windows duplicates
 - `.github/workflows/build.yml` – converts the model on macOS and builds the unsigned IPA
 - Generated and never committed: `HelloWorld/Models/`, `model/data/`, `model/checkpoints/`, `model/coreml/`, `dist/`
@@ -42,7 +44,8 @@ Do not make a design decision on your own. If a choice is open (new dependency, 
 - Coverage must be **100%** (lines and branches). No `# pragma: no cover` / coverage excludes without asking first.
 - Python (live): `pip install -r model/requirements-test.txt`, then run `pytest` from the repo root. Tests are in `model/tests/`; `pytest.ini` enforces 100% line + branch coverage. `conftest.py` fakes torch/transformers/datasets/coremltools, so tests are offline and instant: add fakes there, never download weights or datasets.
 - Swift (pending): `HelloWorldTests/` is an empty XCTest stub with no CI job yet (the runner has no iOS simulator matching the app's deployment target, and there is nothing to run). The Swift code (WhisperKit, microphone, SwiftUI, Core ML bundle) needs a testability refactor first; that planned change also adds the Swift CI job.
-- CI (`.github/workflows/test.yml`) runs the Python suite on every push and PR.
+- Pruning (live): `pruning/` has its own suite with real CPU torch and a tiny random T5 (no downloads). Install CPU torch plus `pruning/requirements-test.txt`, then `cd pruning && pytest`; same 100% gate. It is separate because `model/tests` fakes torch globally.
+- CI (`.github/workflows/test.yml`) runs the `model/` and `pruning/` suites on every push and PR.
 - Bug fix = a failing test first, then the fix.
 - Python is at 100% today. Never lower it. Swift predates these rules; when you touch a Swift file, make it testable and test it.
 

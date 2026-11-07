@@ -15,3 +15,16 @@ jobs:
       - run: pip install -r model/requirements-test.txt
       # 100% line + branch coverage is enforced by --cov-fail-under in pytest.ini
       - run: pytest
+
+  pruning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r pruning/requirements-test.txt
+      # Own suite: model/tests fakes torch, pruning/tests uses real CPU torch. Same 100% gate.
+      - run: pytest
+        working-directory: pruning
