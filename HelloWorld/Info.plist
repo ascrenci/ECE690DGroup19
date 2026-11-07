@@ -21,6 +21,9 @@
     <key>CFBundleVersion</key>
     <string>1</string>
 
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Used to transcribe spoken math to notes.</string>
+
     <key>UILaunchScreen</key>
     <dict/>
 

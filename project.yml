@@ -3,6 +3,11 @@ name: HelloWorld
 options:
   bundleIdPrefix: com.example
 
+packages:
+  WhisperKit:
+    url: https://github.com/argmaxinc/WhisperKit
+    from: "1.1.1"
+
 targets:
   HelloWorld:
     type: application
@@ -11,6 +16,9 @@ targets:
 
     sources:
       - HelloWorld
+
+    dependencies:
+      - package: WhisperKit
 
     info:
       path: HelloWorld/Info.plist
