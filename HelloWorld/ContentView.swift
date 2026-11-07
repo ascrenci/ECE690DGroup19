@@ -1,3 +1,4 @@
+import LaTeXSwiftUI
 import SwiftUI
 
 struct ContentView: View {
@@ -45,17 +46,13 @@ struct ContentView: View {
                     if latex.isEmpty {
                         Text(latexStatus)
                             .foregroundStyle(.secondary)
-                    } else if MathView.canRender(latex) {
-                        ScrollView(.horizontal) {
-                            MathView(latex: latex)
-                        }
+                    } else {
+                        LaTeX(latex)
+                            .parsingMode(.onlyEquations)
+                            .errorMode(.original)
                         Text(latex)
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    } else {
-                        Text(latex)
-                            .font(.system(.body, design: .monospaced))
                             .textSelection(.enabled)
                     }
                 }

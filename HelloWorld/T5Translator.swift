@@ -52,7 +52,7 @@ actor T5Translator {
     }
 
     /// Greedy decoding. The decoder has no KV cache yet, so each step re-runs the whole (padded) prefix.
-    func translate(_ text: String, maxNewTokens: Int = 96) throws -> String {
+    func translate(_ text: String, maxNewTokens: Int = 127) throws -> String {
         let encLen = meta.maxEncoderLength
         let decLen = meta.maxDecoderLength
 
