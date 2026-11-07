@@ -110,12 +110,13 @@ final class Transcriber: ObservableObject {
             let results = try await whisper.transcribe(audioPath: clipURL.path)
             transcript = results.map(\.text).joined(separator: " ")
             let wall = Date().timeIntervalSince(start)
-            if let t = results.first?.timings {
-                // RTF < 1 means faster than real time; the first run after load is slower (warm-up), so test several times.
+            if let tim = results.first?.timings {
+                // RTF < 1 means faster than real time; the first run after load is slower (warm-up).
                 status = String(
-                    format: "Audio %.1fs · encode %.0fms · decode %.0fms · total %.0fms\nRTF %.3f · %.0f tok/s · wall %.2fs",
-                    t.inputAudioSeconds, t.encoding * 1000, t.decodingLoop * 1000, t.fullPipeline * 1000,
-                    t.realTimeFactor, t.tokensPerSecond, wall
+                    format: "Audio %.1fs · encode %.0fms · decode %.0fms · total %.0fms\n"
+                        + "RTF %.3f · %.0f tok/s · wall %.2fs",
+                    tim.inputAudioSeconds, tim.encoding * 1000, tim.decodingLoop * 1000, tim.fullPipeline * 1000,
+                    tim.realTimeFactor, tim.tokensPerSecond, wall
                 )
             } else {
                 status = String(format: "Done (%.2fs)", wall)
