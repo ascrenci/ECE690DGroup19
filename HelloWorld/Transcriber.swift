@@ -24,7 +24,8 @@ final class Transcriber: ObservableObject {
         do {
             status = "Loading \(modelName)… (first launch downloads + compiles, can take a minute)"
             let start = Date()
-            whisper = try await WhisperKit(WhisperKitConfig(model: modelName))
+            // load: true, else WhisperKit defers loading (incl. the tokenizer streaming needs) to the first transcribe().
+            whisper = try await WhisperKit(WhisperKitConfig(model: modelName, load: true))
             status = String(format: "Model ready (%.1fs)", Date().timeIntervalSince(start))
         } catch {
             status = "Model load failed: \(error)"
