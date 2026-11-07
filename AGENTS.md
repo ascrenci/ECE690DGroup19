@@ -12,6 +12,16 @@ iOS app that turns spoken math from lectures into LaTeX, live and fully on-devic
 - `.github/workflows/build.yml` – converts the model on macOS and builds the unsigned IPA
 - Generated and never committed: `HelloWorld/Models/`, `model/data/`, `model/checkpoints/`, `model/coreml/`, `dist/`
 
+## 0. Pull first
+
+Before anything else, check whether teammates have pushed changes:
+
+```bash
+git fetch && git status -sb
+```
+
+If the branch is `behind`, commit or stash local work, then `git pull`. Pulled changes can make the graph stale, so run `graphify update .` afterwards.
+
 ## 1. Understand before changing: use the graph
 
 Before planning or editing, and again whenever a request touches code you haven't read:
