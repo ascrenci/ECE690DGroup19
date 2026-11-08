@@ -58,6 +58,21 @@ def test_main_filters_splits_and_writes_jsonl(tmp_path, monkeypatch, capsys):
     assert "warning" not in out
 
 
+def test_extra_eval_rows_come_after_train_and_leave_it_unchanged(tmp_path, monkeypatch):
+    monkeypatch.setattr(prepare_data, "load_dataset", lambda *a, **k: Stream(ROWS))
+    monkeypatch.setattr(sys, "argv", args(tmp_path, 2, 1) + ["--extra-eval-rows", "1"])
+    prepare_data.main()
+    assert [r["latex"] for r in read(tmp_path / "train.jsonl")] == ["$y + 1$ holds", "so $z - 1$"]
+    assert [r["latex"] for r in read(tmp_path / "eval_extra.jsonl")] == ["so $q = 1$"]
+
+
+def test_no_extra_file_by_default(tmp_path, monkeypatch):
+    monkeypatch.setattr(prepare_data, "load_dataset", lambda *a, **k: Stream(ROWS))
+    monkeypatch.setattr(sys, "argv", args(tmp_path, 2, 1))
+    prepare_data.main()
+    assert not (tmp_path / "eval_extra.jsonl").exists()
+
+
 def test_main_warns_when_not_enough_usable_rows(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(prepare_data, "load_dataset", lambda *a, **k: Stream(ROWS[:1]))
     monkeypatch.setattr(sys, "argv", args(tmp_path, 5, 1))

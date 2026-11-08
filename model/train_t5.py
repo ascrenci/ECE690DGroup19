@@ -55,10 +55,12 @@ def evaluate(model, tok, rows, max_source, max_target, batch_size=64, show=10):
     return {"exact_match": exact, "char_similarity": sim}
 
 
-def fit(model, tok, train, out, epochs, batch_size, lr, max_source, max_target, resume=False, save=True):
+def fit(model, tok, train, out, epochs, batch_size, lr, max_source, max_target, resume=False, save=True,
+        grad_accum=1, trainer_cls=Seq2SeqTrainer, **trainer_kwargs):
     """Fine-tune `model` in place on `train` (rows with `spoken` and `target`); returns the trainer.
 
-    Takes a model object so pruning/ can reuse it. save=False skips intermediate checkpoints.
+    Takes a model object so pruning/ can reuse it: save=False skips intermediate checkpoints, grad_accum
+    keeps the effective batch when memory is tight, and trainer_cls/trainer_kwargs swap in e.g. a distillation trainer.
     """
     def tokenize(batch):
         enc = tok([latex_chars.PROMPT + s for s in batch["spoken"]], max_length=max_source, truncation=True)
@@ -72,6 +74,7 @@ def fit(model, tok, train, out, epochs, batch_size, lr, max_source, max_target, 
         output_dir=str(out),
         num_train_epochs=epochs,
         per_device_train_batch_size=batch_size,
+        gradient_accumulation_steps=grad_accum,
         learning_rate=lr,
         lr_scheduler_type="linear",
         warmup_ratio=0.03,
@@ -84,12 +87,13 @@ def fit(model, tok, train, out, epochs, batch_size, lr, max_source, max_target, 
         save_total_limit=2,
         report_to="none",
     )
-    trainer = Seq2SeqTrainer(
+    trainer = trainer_cls(
         model=model,
         args=targs,
         train_dataset=train,
         data_collator=DataCollatorForSeq2Seq(tok, model=model, label_pad_token_id=-100),
         tokenizer=tok,
+        **trainer_kwargs,
     )
     trainer.train(resume_from_checkpoint=True if resume else None)
     return trainer

@@ -34,6 +34,8 @@ def main():
     ap.add_argument("--out", type=Path, default=Path("model/data"))
     ap.add_argument("--train-rows", type=int, default=300_000)
     ap.add_argument("--eval-rows", type=int, default=1_000)
+    ap.add_argument("--extra-eval-rows", type=int, default=0,
+                    help="more held-out rows (eval_extra.jsonl) taken AFTER the train rows, so they stay unseen by any model")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--buffer", type=int, default=100_000, help="shuffle buffer for the streamed dataset")
     args = ap.parse_args()
@@ -44,7 +46,7 @@ def main():
     stream = load_dataset("Kyudan/MathBridge", split="train", streaming=True)
     stream = stream.shuffle(seed=args.seed, buffer_size=args.buffer)
 
-    want = args.train_rows + args.eval_rows
+    want = args.train_rows + args.eval_rows + args.extra_eval_rows
     seen, kept, dropped = set(), [], collections.Counter()
     for row in itertools.islice(stream, want * 3 + 10_000):  # filters drop <10%; the cap just bounds a bad run
         said = latex_chars.normalize_spoken(row["spoken_English"] or "")
@@ -76,10 +78,14 @@ def main():
 
     if len(kept) < want:
         print(f"warning: only {len(kept)} usable rows, wanted {want}")
-    eval_rows, train_rows = kept[: args.eval_rows], kept[args.eval_rows :]
+    eval_rows = kept[: args.eval_rows]
+    train_rows = kept[args.eval_rows : args.eval_rows + args.train_rows]
+    splits = [("eval", eval_rows), ("train", train_rows)]
+    if args.extra_eval_rows:
+        splits.append(("eval_extra", kept[args.eval_rows + args.train_rows :]))
 
     args.out.mkdir(parents=True, exist_ok=True)
-    for name, rows in (("eval", eval_rows), ("train", train_rows)):
+    for name, rows in splits:
         with open(args.out / f"{name}.jsonl", "w", encoding="utf-8") as f:
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")

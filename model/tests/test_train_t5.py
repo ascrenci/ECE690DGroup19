@@ -75,3 +75,13 @@ def test_train_with_row_limit_resume_and_cuda(run, model, monkeypatch):
 def test_runs_as_script(monkeypatch, data_dir, model):
     monkeypatch.setattr(sys, "argv", ["train_t5.py", "--eval-only", "--data", str(data_dir)])
     runpy.run_module("train_t5", run_name="__main__")
+
+
+def test_fit_passes_accumulation_and_extra_kwargs_to_a_custom_trainer(model, tok, tmp_path):
+    class Custom(FakeTrainer):
+        pass
+
+    trainer = train_t5.fit(model, tok, FakeDataset(TRAIN), tmp_path, 1, 2, 1e-4, 8, 8, grad_accum=3,
+                           trainer_cls=Custom, teacher="T")
+    assert isinstance(trainer, Custom) and trainer.kw["teacher"] == "T"
+    assert trainer.kw["args"].gradient_accumulation_steps == 3
