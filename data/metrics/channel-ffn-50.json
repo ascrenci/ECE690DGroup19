@@ -1,0 +1,64 @@
+{
+  "id": "channel-ffn-50",
+  "method": "channel",
+  "level": 0.5,
+  "recovery": {
+    "rows": 100000,
+    "epochs": 1.0,
+    "lr": 0.0003,
+    "batch_size": 64,
+    "grad_accum": 1,
+    "seed": 0,
+    "distill": null
+  },
+  "only": "ffn",
+  "params": {
+    "total": 64378240,
+    "embeddings": 32899072,
+    "layers": 31479168,
+    "prunable": 31457280
+  },
+  "size_mb": {
+    "fp32": 257.51296,
+    "fp16": 128.75648
+  },
+  "eval": {
+    "exact_match": 0.3744,
+    "char_similarity": 0.932635900602284,
+    "loss": 0.25791045052951583,
+    "rows": 5000
+  },
+  "latency_ms": {
+    "cpu": 442.9714724138366,
+    "cuda": 361.67137586192536
+  },
+  "spec": {
+    "ffn": {
+      "encoder": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "decoder": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ]
+    },
+    "heads": {
+      "encoder": 6,
+      "decoder": 6
+    },
+    "vocab": 32128
+  }
+}

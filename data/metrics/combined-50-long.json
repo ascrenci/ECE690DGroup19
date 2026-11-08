@@ -1,0 +1,65 @@
+{
+  "id": "combined-50-long",
+  "method": "combined",
+  "level": 0.5,
+  "recovery": {
+    "rows": 300000,
+    "epochs": 2.0,
+    "lr": 0.0003,
+    "batch_size": 64,
+    "grad_accum": 1,
+    "seed": 0,
+    "distill": null
+  },
+  "channel_from": "nas-50",
+  "kept_tokens": 14757,
+  "params": {
+    "total": 37152960,
+    "embeddings": 15111168,
+    "layers": 22041792,
+    "prunable": 22020096
+  },
+  "size_mb": {
+    "fp32": 148.61184,
+    "fp16": 74.30592
+  },
+  "eval": {
+    "exact_match": 0.3742,
+    "char_similarity": 0.9334777299649686,
+    "loss": 0.25439041336605545,
+    "rows": 5000
+  },
+  "latency_ms": {
+    "cpu": 250.94260689641894,
+    "cuda": 357.6334172416707
+  },
+  "spec": {
+    "ffn": {
+      "encoder": [
+        256,
+        512,
+        256,
+        768,
+        1024,
+        256,
+        512,
+        256
+      ],
+      "decoder": [
+        512,
+        1024,
+        256,
+        256,
+        768,
+        256,
+        1024,
+        256
+      ]
+    },
+    "heads": {
+      "encoder": 3,
+      "decoder": 3
+    },
+    "vocab": 14757
+  }
+}
