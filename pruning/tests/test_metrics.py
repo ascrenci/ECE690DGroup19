@@ -37,7 +37,7 @@ def test_measure_records_everything(model, tok, rows):
     record = metrics.measure(model, tok, rows, 16, 4, latency_rows=2)
     assert set(record) == {"params", "size_mb", "eval", "latency_ms", "spec"}
     assert record["size_mb"]["fp32"] == record["params"]["total"] * 4 / 1e6
-    assert set(record["eval"]) == {"exact_match", "char_similarity", "loss"}
+    assert set(record["eval"]) == {"exact_match", "char_similarity", "loss", "rows"}
     assert list(record["latency_ms"]) == ["cpu"]  # conftest hides the GPU
 
 

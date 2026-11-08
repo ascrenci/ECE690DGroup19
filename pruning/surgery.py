@@ -38,6 +38,17 @@ def _linear(old, rows=None, cols=None):
     return new
 
 
+def drop_layers(model, keep):
+    """keep[stack] = indices of the blocks to keep (stacks not listed are untouched). Block 0 must stay: it
+    owns the relative-position bias that every later block reuses."""
+    for stack, idx in keep.items():
+        assert idx[0] == 0, "block 0 holds the relative position bias"
+        part = getattr(model, stack)
+        part.block = nn.ModuleList([part.block[i] for i in idx])
+        part.config.num_layers = len(idx)
+        setattr(model.config, "num_layers" if stack == "encoder" else "num_decoder_layers", len(idx))
+
+
 def prune_ffn(model, keep):
     """keep[stack] = one index tensor per layer: the d_ff channels to keep."""
     for stack in STACKS:
@@ -107,6 +118,7 @@ def save(model, path, kept_ids=None):
 def load(model, path):
     """Reshape a fresh base-architecture `model` to the saved spec, load the weights; returns kept_ids or None."""
     spec = json.loads((path / "spec.json").read_text())
+    drop_layers(model, {s: list(range(len(spec["ffn"][s]))) for s in STACKS})
     prune_ffn(model, {s: [torch.arange(w) for w in spec["ffn"][s]] for s in STACKS})
     prune_heads(model, {s: torch.arange(spec["heads"][s]) for s in STACKS})
     prune_vocab(model, torch.arange(spec["vocab"]))

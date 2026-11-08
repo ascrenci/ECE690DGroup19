@@ -6,7 +6,8 @@ import io
 import json
 from pathlib import Path
 
-ORDER = ["baseline", "channel-30", "channel-50", "nas-30", "nas-50", "vocab", "combined-50"]
+ORDER = ["baseline", "channel-30", "channel-50", "channel-ffn-30", "channel-ffn-50", "channel-heads-30", "channel-heads-50",
+         "nas-30", "nas-50", "layers-dec6", "layers-dec4", "vocab", "combined-50", "combined-50-long", "combined-50-distill"]
 COLUMNS = ["Model", "Params (M)", "Param change", "fp16 MB", "Exact match", "Exact change", "Char sim", "Loss",
            "CPU ms", "GPU ms"]
 

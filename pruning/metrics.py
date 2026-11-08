@@ -17,11 +17,8 @@ def param_counts(model):
     return {"total": total, "embeddings": emb, "layers": total - emb, "prunable": surgery.prunable_params(model)}
 
 
-def eval_loss(model, tok, rows, max_source=127, max_target=127, batch_size=32):
-    """Teacher-forced token cross-entropy on `rows`, tokenized exactly as in training."""
-    model.eval()
-    device = next(model.parameters()).device
-    loss_sum, tokens = 0.0, 0
+def batches(tok, rows, max_source=127, max_target=127, batch_size=32):
+    """(encoded inputs, labels with padding as -100) per batch, tokenized exactly as in training."""
     for i in range(0, len(rows), batch_size):
         chunk = rows[i : i + batch_size]
         enc = tok([latex_chars.PROMPT + r["spoken"] for r in chunk], return_tensors="pt", padding=True,
@@ -29,6 +26,15 @@ def eval_loss(model, tok, rows, max_source=127, max_target=127, batch_size=32):
         labels = tok(text_target=[r["target"] for r in chunk], return_tensors="pt", padding=True,
                      truncation=True, max_length=max_target)["input_ids"]
         labels[labels == tok.pad_token_id] = -100
+        yield enc, labels
+
+
+def eval_loss(model, tok, rows, max_source=127, max_target=127, batch_size=32):
+    """Teacher-forced token cross-entropy on `rows`."""
+    model.eval()
+    device = next(model.parameters()).device
+    loss_sum, tokens = 0.0, 0
+    for enc, labels in batches(tok, rows, max_source, max_target, batch_size):
         with torch.no_grad():
             loss = model(**enc.to(device), labels=labels.to(device)).loss
         n = int((labels != -100).sum())
@@ -58,7 +64,7 @@ def measure(model, tok, eval_rows, max_source=127, max_target=127, latency_rows=
     return {
         "params": params,
         "size_mb": {"fp32": params["total"] * 4 / 1e6, "fp16": params["total"] * 2 / 1e6},
-        "eval": {**scores, "loss": eval_loss(model, tok, eval_rows, max_source, max_target)},
+        "eval": {**scores, "loss": eval_loss(model, tok, eval_rows, max_source, max_target), "rows": len(eval_rows)},
         "latency_ms": {d: latency_ms(model, tok, eval_rows[:latency_rows], d, max_target) for d in devices},
         "spec": surgery.spec_of(model),
     }

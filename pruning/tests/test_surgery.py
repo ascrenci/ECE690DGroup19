@@ -1,3 +1,4 @@
+import pytest
 import torch
 from conftest import logits
 
@@ -83,3 +84,32 @@ def test_spec_save_and_load_round_trip(model, make_model, tmp_path):
 def test_save_without_kept_ids_loads_none(model, make_model, tmp_path):
     surgery.save(model, tmp_path / "m")
     assert surgery.load(make_model(seed=3), tmp_path / "m") is None
+
+
+def test_drop_layers_keeps_blocks_updates_config_and_still_generates(model):
+    surgery.drop_layers(model, {"decoder": [0]})
+    assert len(model.decoder.block) == 1 and model.config.num_decoder_layers == 1 and model.decoder.config.num_layers == 1
+    assert len(model.encoder.block) == 2  # untouched stack
+    out = model.generate(input_ids=torch.tensor([[5, 6, 1]]), max_new_tokens=3, do_sample=False)
+    assert out.shape[0] == 1 and surgery.spec_of(model)["ffn"]["decoder"] == [32]
+
+
+def test_drop_layers_selects_the_listed_blocks(model):
+    second = model.encoder.block[1]
+    surgery.drop_layers(model, {"encoder": [0, 1]})
+    assert model.encoder.block[1] is second and model.config.num_layers == 2
+
+
+def test_drop_layers_requires_block_zero(model):
+    with pytest.raises(AssertionError, match="block 0"):
+        surgery.drop_layers(model, {"decoder": [1]})
+
+
+def test_save_and_load_round_trip_with_dropped_layers(model, make_model, tmp_path):
+    surgery.drop_layers(model, {"decoder": [0]})
+    surgery.prune_ffn(model, {"encoder": [torch.arange(8)] * 2, "decoder": [torch.arange(4)]})
+    surgery.save(model, tmp_path / "m")
+    fresh = make_model(seed=9)
+    surgery.load(fresh, tmp_path / "m")
+    assert surgery.spec_of(fresh) == surgery.spec_of(model)
+    assert torch.allclose(logits(model, (3, 4, 1), (0, 3)), logits(fresh, (3, 4, 1), (0, 3)))

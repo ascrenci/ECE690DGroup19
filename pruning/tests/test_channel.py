@@ -39,3 +39,10 @@ def test_uniform_scales_every_layer_and_keeps_at_least_one_head(model):
     ffn, heads = channel.uniform(model, 0.5)
     assert ffn == {"encoder": [16, 16], "decoder": [16, 16]} and heads == {"encoder": 2, "decoder": 2}
     assert channel.uniform(model, 0.99)[1] == {"encoder": 1, "decoder": 1}
+
+
+def test_uniform_only_prunes_one_part(model):
+    ffn, heads = channel.uniform(model, 0.5, only="ffn")
+    assert ffn["encoder"] == [16, 16] and heads == {"encoder": 4, "decoder": 4}
+    ffn, heads = channel.uniform(model, 0.5, only="heads")
+    assert ffn["encoder"] == [32, 32] and heads == {"encoder": 2, "decoder": 2}

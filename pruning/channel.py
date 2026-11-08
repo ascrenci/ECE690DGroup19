@@ -34,11 +34,14 @@ def apply(model, ffn_widths, heads):
     surgery.prune_heads(model, keep_heads)
 
 
-def uniform(model, level):
-    """Same keep ratio (1 - level) for every layer's FFN and every stack's heads: (ffn_widths, heads)."""
+def uniform(model, level, only=None):
+    """Same keep ratio (1 - level) for every layer's FFN and every stack's heads: (ffn_widths, heads).
+
+    only="ffn" or "heads" prunes just that part; the other keeps its full size.
+    """
     cfg = model.config
-    width = round(cfg.d_ff * (1 - level))
-    count = max(1, round(cfg.num_heads * (1 - level)))
+    width = cfg.d_ff if only == "heads" else round(cfg.d_ff * (1 - level))
+    count = cfg.num_heads if only == "ffn" else max(1, round(cfg.num_heads * (1 - level)))
     return (
         {"encoder": [width] * cfg.num_layers, "decoder": [width] * cfg.num_decoder_layers},
         {"encoder": count, "decoder": count},
