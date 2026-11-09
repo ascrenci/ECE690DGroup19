@@ -37,6 +37,8 @@ class FakeTokenizer:
     def __call__(self, text=None, text_target=None, return_tensors=None, **_kw):
         text = text_target if text_target is not None else text
         if isinstance(text, list):
+            if not text:
+                raise IndexError("list index out of range")  # what a real fast tokenizer does on []
             return Enc(input_ids=[self._ids(t) for t in text])
         ids = self._ids(text)
         if return_tensors == "pt":

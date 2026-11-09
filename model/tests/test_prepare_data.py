@@ -10,7 +10,12 @@ class Stream:
         self.rows = rows
 
     def shuffle(self, seed, buffer_size):
-        return iter(self.rows)
+        return self
+
+    def iter(self, batch_size):
+        for i in range(0, len(self.rows), batch_size):
+            chunk = self.rows[i : i + batch_size]
+            yield {k: [r[k] for r in chunk] for k in chunk[0]}
 
 
 def row(spoken, equation, before="so", after=""):
@@ -85,3 +90,31 @@ def test_runs_as_script(tmp_path, monkeypatch):
     monkeypatch.setattr(sys, "argv", args(tmp_path, 2, 1))
     runpy.run_module("prepare_data", run_name="__main__")
     assert (tmp_path / "train.jsonl").exists()
+
+
+def run(tmp_path, monkeypatch, batch, rows=ROWS):
+    monkeypatch.setattr(prepare_data, "BATCH", batch)
+    monkeypatch.setattr(prepare_data, "load_dataset", lambda *a, **k: Stream(rows))
+    monkeypatch.setattr(sys, "argv", args(tmp_path, 2, 1) + ["--extra-eval-rows", "1"])
+    prepare_data.main()
+    return [(tmp_path / f).read_text() for f in ("eval.jsonl", "train.jsonl", "eval_extra.jsonl")]
+
+
+def test_any_batch_size_gives_the_same_rows_and_counts(tmp_path, monkeypatch, capsys):
+    # size 2 also gives batches where every row fails a cheap check, so nothing is tokenized
+    whole = run(tmp_path / "a", monkeypatch, len(ROWS)), capsys.readouterr().out
+    for batch in (1, 2, 3):
+        assert (run(tmp_path / str(batch), monkeypatch, batch), capsys.readouterr().out.replace(f"/{batch}", "/a")) == whole
+
+
+def test_duplicates_are_caught_across_batches(tmp_path, monkeypatch, capsys):
+    run(tmp_path, monkeypatch, 1, rows=ROWS[:1] + ROWS)
+    assert "'duplicate': 2" in capsys.readouterr().out
+
+
+def test_cap_stops_reading_a_stream_of_unusable_rows(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(prepare_data, "BATCH", 10_000)
+    monkeypatch.setattr(prepare_data, "load_dataset", lambda *a, **k: Stream([row("", "z = 1")] * 30_000))
+    monkeypatch.setattr(sys, "argv", args(tmp_path, 1, 1))
+    prepare_data.main()
+    assert "'empty spoken': 20000" in capsys.readouterr().out  # cap 2*3 + 10_000 rounds up to 2 batches

@@ -82,3 +82,16 @@ def test_roundtrip_ok_false_on_unknown_token():
 
 def test_roundtrip_ok_false_when_decode_differs():
     assert not lc.roundtrip_ok("a b", DropsSpaces())
+
+
+def test_roundtrip_ok_many_keeps_order_and_skips_unencodable():
+    assert lc.roundtrip_ok_many(["a@b", r"\frac{a}{b}", "x + 1", "a@b"], NoX()) == [False, True, False, False]
+
+
+def test_roundtrip_ok_many_empty():
+    assert lc.roundtrip_ok_many([], FakeTokenizer()) == []
+
+
+def test_token_ids_empty_without_calling_the_tokenizer():
+    assert lc.token_ids(FakeTokenizer(), []) == []
+    assert lc.token_ids(FakeTokenizer(), ["ab"]) == [[97, 98]]

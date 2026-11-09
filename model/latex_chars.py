@@ -110,13 +110,26 @@ def roundtrip_ok(latex: str, tokenizer) -> bool:
     Use this to filter training data: it drops anything with reserved/non-ASCII characters and
     any equation that collides with a pseudo-command (e.g. a custom macro literally named \bq).
     """
-    try:
-        s = encode(latex)
-    except ValueError:
-        return False
-    ids = tokenizer(s, add_special_tokens=False).input_ids
-    if tokenizer.unk_token_id in ids:
-        return False
+    return roundtrip_ok_many([latex], tokenizer)[0]
+
+
+def roundtrip_ok_many(latexes: list, tokenizer) -> list:
+    """roundtrip_ok for each of `latexes`, with one tokenizer call and one batch_decode (much faster)."""
+    encoded = {}
+    for i, latex in enumerate(latexes):
+        try:
+            encoded[i] = encode(latex)
+        except ValueError:
+            pass
+    ids = token_ids(tokenizer, list(encoded.values()), add_special_tokens=False)
     # clean_up_tokenization_spaces would silently delete spaces before , . ? ! (our "}" stand-in is "?")
-    text = tokenizer.decode(ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-    return decode(text) == normalize(latex)
+    texts = tokenizer.batch_decode(ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+    ok = [False] * len(latexes)
+    for i, row, text in zip(encoded, ids, texts):
+        ok[i] = tokenizer.unk_token_id not in row and decode(text) == normalize(latexes[i])
+    return ok
+
+
+def token_ids(tokenizer, texts: list, **kw) -> list:
+    """tokenizer(texts).input_ids, or [] for no texts (fast tokenizers raise IndexError on an empty batch)."""
+    return tokenizer(texts, **kw).input_ids if texts else []

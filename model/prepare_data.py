@@ -26,6 +26,30 @@ from transformers import AutoTokenizer
 import latex_chars
 
 MAX_TOKENS = 127  # convert_t5.py's default 128 encoder/decoder lengths, minus </s>
+BATCH = 1_000  # rows read and tokenized per call; one call per row spent most of the time in Python overhead
+
+
+def screen(row):
+    """The note built from one MathBridge row, with the reason to drop it if a cheap check already fails."""
+    said = latex_chars.normalize_spoken(row["spoken_English"] or "")
+    equation = latex_chars.normalize(row["equation"] or "")
+    before = " ".join((row["context_before"] or "").split())
+    after = " ".join((row["context_after"] or "").split())
+    drop = None
+    if not said:
+        drop = "empty spoken"
+    elif len(equation) < 2:
+        drop = "single-char equation"
+    elif not (before or after):
+        # a lone "$...$" would be stripped back to bare LaTeX by latex_chars.normalize
+        drop = "no context"
+    elif "$" in before + after:
+        drop = "math in context"
+    return {
+        "spoken": latex_chars.normalize_spoken(f"{before} {said} {after}"),
+        "latex": " ".join(p for p in (before, f"${equation}$", after) if p),
+        "drop": drop,
+    }
 
 
 def main():
@@ -47,34 +71,34 @@ def main():
     stream = stream.shuffle(seed=args.seed, buffer_size=args.buffer)
 
     want = args.train_rows + args.eval_rows + args.extra_eval_rows
+    max_batches = -(-(want * 3 + 10_000) // BATCH)  # filters drop <10%; the cap just bounds a bad run
     seen, kept, dropped = set(), [], collections.Counter()
-    for row in itertools.islice(stream, want * 3 + 10_000):  # filters drop <10%; the cap just bounds a bad run
-        said = latex_chars.normalize_spoken(row["spoken_English"] or "")
-        equation = latex_chars.normalize(row["equation"] or "")
-        before = " ".join((row["context_before"] or "").split())
-        after = " ".join((row["context_after"] or "").split())
-        spoken = latex_chars.normalize_spoken(f"{before} {said} {after}")
-        latex = " ".join(p for p in (before, f"${equation}$", after) if p)
-        if not said:
-            dropped["empty spoken"] += 1
-        elif len(equation) < 2:
-            dropped["single-char equation"] += 1
-        elif not (before or after):
-            # a lone "$...$" would be stripped back to bare LaTeX by latex_chars.normalize
-            dropped["no context"] += 1
-        elif "$" in before + after:
-            dropped["math in context"] += 1
-        elif (spoken, latex) in seen:
-            dropped["duplicate"] += 1
-        elif not latex_chars.roundtrip_ok(latex, tok):
-            dropped["not representable in T5 vocab"] += 1
-        elif max(len(tok(t).input_ids) for t in (latex_chars.PROMPT + spoken, latex_chars.encode(latex))) > MAX_TOKENS:
-            dropped["too long"] += 1
-        else:
-            seen.add((spoken, latex))
-            kept.append({"spoken": spoken, "latex": latex, "target": latex_chars.encode(latex)})
-            if len(kept) == want:
-                break
+    for batch in itertools.islice(stream.iter(batch_size=BATCH), max_batches):
+        rows = [screen(dict(zip(batch, values))) for values in zip(*batch.values())]
+        fine = [r for r in rows if not r["drop"]]
+        for r, ok in zip(fine, latex_chars.roundtrip_ok_many([r["latex"] for r in fine], tok)):
+            r["drop"] = None if ok else "not representable in T5 vocab"
+        fine = [r for r in fine if not r["drop"]]
+        for r in fine:
+            r["target"] = latex_chars.encode(r["latex"])
+        sources = latex_chars.token_ids(tok, [latex_chars.PROMPT + r["spoken"] for r in fine])
+        targets = latex_chars.token_ids(tok, [r["target"] for r in fine])
+        for r, s, t in zip(fine, sources, targets):
+            r["drop"] = "too long" if max(len(s), len(t)) > MAX_TOKENS else None
+
+        # in stream order, so the kept rows, the duplicate check and the counts match a row-at-a-time pass
+        for r in rows:
+            if r["drop"]:
+                dropped[r["drop"]] += 1
+            elif (r["spoken"], r["latex"]) in seen:
+                dropped["duplicate"] += 1
+            else:
+                seen.add((r["spoken"], r["latex"]))
+                kept.append({k: r[k] for k in ("spoken", "latex", "target")})
+                if len(kept) == want:
+                    break
+        if len(kept) == want:
+            break
 
     if len(kept) < want:
         print(f"warning: only {len(kept)} usable rows, wanted {want}")
