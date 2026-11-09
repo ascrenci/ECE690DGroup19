@@ -26,12 +26,18 @@ actor T5Translator {
         let decoderStartTokenId: Int
         /// T5 can't emit \ ^ { } ~ < ` so the model writes stand-ins; applied in order (model/latex_chars.py).
         let latexDecode: [[String]]
+        /// Pruned vocabulary: model id i is tokenizer id keptIds[i]. Nil when the vocabulary is unpruned.
+        let keptIds: [Int]?
     }
+
+    /// Tokenizer ids outside a pruned vocabulary become <unk>, which keeps id 2 (pruning keeps ids 0, 1, 2).
+    static let unkId = 2
 
     private let encoder: MLModel
     private let decoder: MLModel
     private let tokenizer: Tokenizer
     private let meta: Meta
+    private let modelIdOf: [Int: Int]?
 
     init() async throws {
         guard let folder = Bundle.main.url(forResource: "t5_tokenizer", withExtension: nil) else {
@@ -47,7 +53,9 @@ actor T5Translator {
         }
         encoder = try load("T5Encoder")
         decoder = try load("T5Decoder")
-        meta = try JSONDecoder().decode(Meta.self, from: Data(contentsOf: folder.appendingPathComponent("t5_meta.json")))
+        let metaURL = folder.appendingPathComponent("t5_meta.json")
+        meta = try JSONDecoder().decode(Meta.self, from: Data(contentsOf: metaURL))
+        modelIdOf = meta.keptIds.map(Self.modelIdLookup)
         tokenizer = try await AutoTokenizer.from(modelFolder: folder)
     }
 
@@ -58,7 +66,7 @@ actor T5Translator {
 
         // Encoder input: prompt + text + </s>, truncated (keeping </s>) and padded.
         var tokens = tokenizer.encode(text: meta.prompt + Self.normalizeSpoken(text), addSpecialTokens: false)
-        tokens = Array(tokens.prefix(encLen - 1)) + [meta.eosTokenId]
+        tokens = Self.toModelIds(Array(tokens.prefix(encLen - 1)), lookup: modelIdOf) + [meta.eosTokenId]
 
         let inputIds = try MLMultiArray(shape: [1, NSNumber(value: encLen)], dataType: .int32)
         let mask = try MLMultiArray(shape: [1, NSNumber(value: encLen)], dataType: .int32)
@@ -98,11 +106,27 @@ actor T5Translator {
             generated.append(next)
             last = next
         }
-        var latex = tokenizer.decode(tokens: generated, skipSpecialTokens: true)
+        let tokenizerIds = Self.fromModelIds(generated, keptIds: meta.keptIds)
+        var latex = tokenizer.decode(tokens: tokenizerIds, skipSpecialTokens: true)
         for step in meta.latexDecode where step.count == 2 {
             latex = latex.replacingOccurrences(of: step[0], with: step[1])
         }
         return latex.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Tokenizer id -> model id, mirroring pruning/vocab.py's Remapped.
+    static func modelIdLookup(_ keptIds: [Int]) -> [Int: Int] {
+        Dictionary(uniqueKeysWithValues: keptIds.enumerated().map { ($0.element, $0.offset) })
+    }
+
+    static func toModelIds(_ ids: [Int], lookup: [Int: Int]?) -> [Int] {
+        guard let lookup else { return ids }
+        return ids.map { lookup[$0] ?? unkId }
+    }
+
+    static func fromModelIds(_ ids: [Int], keptIds: [Int]?) -> [Int] {
+        guard let keptIds else { return ids }
+        return ids.map { keptIds[$0] }
     }
 
     /// Mirrors latex_chars.normalize_spoken: collapse whitespace, drop trailing . , ; : (case is kept).
