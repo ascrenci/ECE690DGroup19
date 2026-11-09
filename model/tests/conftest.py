@@ -31,6 +31,9 @@ class FakeTokenizer:
 
     unk_token_id = UNK
 
+    def __len__(self):
+        return 127  # ids are ASCII codes
+
     def _ids(self, text):
         return [UNK if (c in UNPRODUCIBLE or ord(c) > 126) else ord(c) for c in text]
 
@@ -168,6 +171,7 @@ transformers = _module(
     "transformers",
     AutoTokenizer=SimpleNamespace(from_pretrained=lambda *_a, **_k: FakeTokenizer()),
     T5ForConditionalGeneration=SimpleNamespace(from_pretrained=lambda *_a, **_k: FakeModel()),
+    T5Config=SimpleNamespace(from_pretrained=lambda *_a, **_k: SimpleNamespace()),
     DataCollatorForSeq2Seq=lambda *a, **k: SimpleNamespace(args=a, kwargs=k),
     Seq2SeqTrainingArguments=lambda **k: SimpleNamespace(**k),
 )

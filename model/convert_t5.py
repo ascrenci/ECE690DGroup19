@@ -25,11 +25,12 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch import nn
-from transformers import AutoTokenizer, T5ForConditionalGeneration
+from transformers import AutoTokenizer, T5Config, T5ForConditionalGeneration
 
 import latex_chars
 
 PROMPT = latex_chars.PROMPT  # shared with training; also written to t5_meta.json for the app
+PRUNING = Path(__file__).resolve().parent.parent / "pruning"
 
 
 class EncoderWrapper(nn.Module):
@@ -166,6 +167,21 @@ def validate(model, tokenizer, enc_len, dec_len, out, max_new=24):
         sys.exit(f"validation failed: logits differ by {diff}")
 
 
+def load(path):
+    """A HF checkpoint, or a pruned one: pruning/surgery.py's model.pt + spec.json next to the base config and
+    tokenizer. Returns (model, tokenizer, tokenizer in the model's id space, kept vocab ids or None)."""
+    tok = AutoTokenizer.from_pretrained(path, clean_up_tokenization_spaces=False)
+    if not (Path(path) / "spec.json").exists():
+        return T5ForConditionalGeneration.from_pretrained(path, torch_dtype=torch.float32).eval(), tok, tok, None
+    sys.path.insert(0, str(PRUNING))
+    import surgery
+    import vocab
+
+    model = T5ForConditionalGeneration(T5Config.from_pretrained(path))
+    kept = surgery.load(model, Path(path))
+    return model.eval(), tok, tok if kept is None else vocab.Remapped(tok, kept, len(tok)), kept
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default="google/flan-t5-small")
@@ -179,8 +195,7 @@ def main():
     tok_dir = args.out / "t5_tokenizer"
 
     print(f"loading {args.model} ...")
-    model = T5ForConditionalGeneration.from_pretrained(args.model, torch_dtype=torch.float32).eval()
-    tokenizer = AutoTokenizer.from_pretrained(args.model, clean_up_tokenization_spaces=False)
+    model, tokenizer, model_tokenizer, kept = load(args.model)
     latex_chars.check_tokenizer(tokenizer)  # the LaTeX<->T5 character mapping relies on this vocab
 
     tokenizer.save_pretrained(tok_dir)
@@ -198,6 +213,8 @@ def main():
                 "vocabSize": model.config.vocab_size,
                 # T5 output -> LaTeX, applied in order (see latex_chars.py)
                 "latexDecode": [list(step) for step in latex_chars.DECODE_STEPS],
+                # Pruned vocab: model id i is tokenizer id keptIds[i]. Null when the vocab is unpruned.
+                "keptIds": kept,
             },
             indent=2,
         )
@@ -205,7 +222,7 @@ def main():
 
     convert(model, args.enc_len, args.dec_len, args.out)
     if not args.no_validate:
-        validate(model, tokenizer, args.enc_len, args.dec_len, args.out)
+        validate(model, model_tokenizer, args.enc_len, args.dec_len, args.out)
     print(f"done -> {args.out}")
 
 

@@ -1,10 +1,11 @@
 import json
 import runpy
 import sys
+import types
 
 import numpy as np
 import pytest
-from conftest import FakeModel, _arr
+from conftest import FakeModel, FakeTokenizer, _arr
 
 import convert_t5
 
@@ -97,6 +98,51 @@ def test_main_writes_tokenizer_meta_and_converts(tmp_path, monkeypatch, recorded
     assert meta["prompt"] == convert_t5.PROMPT
     assert meta["latexDecode"][0] == ["@lt", "<"]
     assert (tmp_path / "t5_tokenizer" / "config.json").exists()
+    assert meta["keptIds"] is None
+
+
+def test_load_plain_checkpoint(tmp_path):
+    model, tok, model_tok, kept = convert_t5.load(tmp_path)
+    assert isinstance(model, FakeModel) and model_tok is tok and kept is None
+
+
+@pytest.fixture
+def pruned(tmp_path, monkeypatch):
+    """A folder with spec.json; fake surgery/vocab modules record what load() asks of them."""
+    (tmp_path / "spec.json").write_text("{}")
+    model = FakeModel(vocab=V)
+    monkeypatch.setattr(convert_t5, "T5ForConditionalGeneration", lambda config: model)
+    surgery = types.SimpleNamespace(kept=None)
+    surgery.load = lambda m, path: surgery.kept
+    vocab = types.SimpleNamespace(Remapped=lambda tok, kept, old: ("remapped", tok, kept, old))
+    monkeypatch.setitem(sys.modules, "surgery", surgery)
+    monkeypatch.setitem(sys.modules, "vocab", vocab)
+    return tmp_path, model, surgery
+
+
+def test_load_pruned_remaps_tokenizer_over_its_full_vocab(pruned):
+    path, model, surgery = pruned
+    surgery.kept = [0, 1, 2]
+    got, tok, model_tok, kept = convert_t5.load(path)
+    assert got is model and kept == [0, 1, 2]
+    assert model_tok == ("remapped", tok, [0, 1, 2], 127)
+
+
+def test_load_pruned_without_vocab_pruning_keeps_tokenizer(pruned):
+    path, _, _ = pruned
+    _, tok, model_tok, kept = convert_t5.load(path)
+    assert model_tok is tok and kept is None
+
+
+def test_main_writes_kept_ids_and_validates_in_model_id_space(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(convert_t5, "load", lambda path: (FakeModel(), FakeTokenizer(), "model_tok", [0, 1, 2, 9]))
+    monkeypatch.setattr(convert_t5, "convert", lambda *a: None)
+    monkeypatch.setattr(convert_t5, "validate", lambda model, tok, *a: calls.append(tok))
+    monkeypatch.setattr(sys, "argv", ["convert_t5.py", "--out", str(tmp_path)])
+    convert_t5.main()
+    assert calls == ["model_tok"]
+    assert json.loads((tmp_path / "t5_tokenizer" / "t5_meta.json").read_text())["keptIds"] == [0, 1, 2, 9]
 
 
 def test_runs_as_script(tmp_path, monkeypatch, coreml):
